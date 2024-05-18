@@ -34,30 +34,41 @@ bool dcompare(double p1[],double p2[]) {
     return NULL;
 }
 
-double calcos(int a,int b,int c,double **dot,bool *f) {//求<BAC
-    *f=true;
+double calcos(int a,int b,int c,double **dot,double *f) {//求<BAC
     double abx=dot[b][0]-dot[a][0],
            aby=dot[b][1]-dot[a][1],
            acx=dot[c][0]-dot[a][0],
            acy=dot[c][1]-dot[a][1];
     double r=acos((abx*acx+aby*acy)/sqrt((abx*abx+aby*aby)*(acx*acx+acy*acy)));
-    if (abx*acy-acx*aby<0) *f=false;
+    *f=abx*acy-acx*aby;
     return r;
 }
 
+int isincircle(int a,int b,int c,int d,double** dot) {//d在a,b,c的圆内
+    double x0,y0;
+    double ax=dot[a][0],bx=dot[b][0],cx=dot[c][0],ay=dot[a][1],by=dot[b][1],cy=dot[c][1];
+    x0=( (ax*ax-bx*bx+ay*ay-by*by)*(ay-cy)-(ax*ax-cx*cx+ay*ay-cy*cy)*(ay-by) ) / (2*(ay-cy)*(ax-bx)-2*(ay-by)*(ax-cx));
+    y0=( (ax*ax-bx*bx+ay*ay-by*by)*(ax-cx)-(ax*ax-cx*cx+ay*ay-cy*cy)*(ax-bx) ) / (2*(ay-by)*(ax-cx)-2*(ay-cy)*(ax-bx));
+    double r=(ax-x0)*(ax-x0) + (ay-y0)*(ay-y0)-((dot[d][0]-x0)*(dot[d][0]-x0)+(dot[d][1]-y0)*(dot[d][1]-y0));
+    //r>0,d点在圆心内
+    if (r>0) return 1;
+    else if (r<0) return -1;
+    return 0;
+}
+
 void choicedot(SVdot vl,SVdot vr,double **dot,int *l,int *r) {
-    bool f;
-    double rr;
+    double f,rr;
     for (int i=0;i<vl.vlen;i++) {
         if (vl.v[i]==*l) continue;
         rr=calcos(*l,*r,vl.v[i],dot,&f);
-        if (!f) {
+        if (f<0) {
             *l=vl.v[i];
             choicedot(vl,vr,dot,l,r);
             return ;
         }
-        if (rr==0) {
-           if (dcompare(dot[vl.v[i]],dot[*l])) {
+        if (f==0) {//三点同线，选离r点近的
+            if ((dot[vl.v[i]][0]-dot[*r][0])*(dot[vl.v[i]][0]-dot[*r][0])+(dot[vl.v[i]][1]-dot[*r][1])*(dot[vl.v[i]][1]-dot[*r][1])
+                    <(dot[*l][0]-dot[*r][0])*(dot[*l][0]-dot[*r][0])+(dot[*l][1]-dot[*r][1])*(dot[*l][1]-dot[*r][1])) {
                *l=vl.v[i];
                choicedot(vl,vr,dot,l,r);
                return;
@@ -67,13 +78,14 @@ void choicedot(SVdot vl,SVdot vr,double **dot,int *l,int *r) {
     for (int i=0;i<vr.vlen;i++) {
         if (vr.v[i]==*r) continue;
         rr=calcos(*l,*r,vr.v[i],dot,&f);
-        if (!f) {
+        if (f<0) {
             *r=vr.v[i];
             choicedot(vl,vr,dot,l,r);
             return ;
         }
-        if (rr==0) {//角度相同，暂时这样处理，待验证
-           if (!dcompare(dot[vr.v[i]],dot[*r])) {
+        if (f==0) {//三点同线，选离l点近的
+            if ((dot[vr.v[i]][0]-dot[*l][0])*(dot[vr.v[i]][0]-dot[*l][0])+(dot[vr.v[i]][1]-dot[*l][1])*(dot[vr.v[i]][1]-dot[*l][1])
+                    <(dot[*l][0]-dot[*r][0])*(dot[*l][0]-dot[*r][0])+(dot[*l][1]-dot[*r][1])*(dot[*l][1]-dot[*r][1])) {
                *r=vr.v[i];
                choicedot(vl,vr,dot,l,r);
                return;
@@ -87,9 +99,10 @@ void choicecan(Scandot *rdot,int a1,int a2,SVdot vl,double **dot,int *dl,bool l)
     int j=0;*dl=-1;
     for (int i=0;i<vl.vlen;i++) {
         if ((vl.v[i]==a1)||(vl.v[i]==a2)) continue;
-        bool f;
+        double f;
         double r=calcos(a2,a1,vl.v[i],dot,&f);
-        if (f!=l) continue;
+//        if (f==0) {qDebug()<<"same line";}
+        if ((l&&(f<0))||((!l)&&(f>0))||(f==0)) continue;
         rdot[i].r=r;
         if (*dl==-1) {
             *dl=i;
@@ -99,11 +112,14 @@ void choicecan(Scandot *rdot,int a1,int a2,SVdot vl,double **dot,int *dl,bool l)
         }
         j=*dl;
         while (true) {
-            if (r==rdot[j].r) {
+            f=false;
+            if (r==rdot[j].r) {//角度相同，离a2近的在前
+                if ((dot[vl.v[i]][0]-dot[a2][0])*(dot[vl.v[i]][0]-dot[a2][0])+(dot[vl.v[i]][1]-dot[a2][1])*(dot[vl.v[i]][0]-dot[a2][0])
+                        >(dot[vl.v[j]][0]-dot[a2][0])*(dot[vl.v[j]][0]-dot[a2][0])+(dot[vl.v[j]][1]-dot[a2][1])*(dot[vl.v[j]][0]-dot[a2][0]))
+                    f=true;
                 qDebug()<<"samecircle:"<<vl.v[i]<<","<<vl.v[j]<<","<<a1<<","<<a2;
-                break;
             }
-            if ((r>rdot[j].r)) {
+            if ((r>rdot[j].r)||(f)) {
                 if (rdot[j].more==-1) {
                     rdot[i].less=j;rdot[i].more=-1;
                     rdot[j].more=i;
@@ -159,18 +175,6 @@ void delline(SVdot *v,int a1,int a2) {
     }
 }
 
-int isincircle(int a,int b,int c,int d,double** dot) {//d在a,b,c的圆内
-    double x0,y0;
-    double ax=dot[a][0],bx=dot[b][0],cx=dot[c][0],ay=dot[a][1],by=dot[b][1],cy=dot[c][1];
-    x0=( (ax*ax-bx*bx+ay*ay-by*by)*(ay-cy)-(ax*ax-cx*cx+ay*ay-cy*cy)*(ay-by) ) / (2*(ay-cy)*(ax-bx)-2*(ay-by)*(ax-cx));
-    y0=( (ax*ax-bx*bx+ay*ay-by*by)*(ax-cx)-(ax*ax-cx*cx+ay*ay-cy*cy)*(ax-bx) ) / (2*(ay-by)*(ax-cx)-2*(ay-cy)*(ax-bx));
-    double r=(ax-x0)*(ax-x0) + (ay-y0)*(ay-y0)-((dot[d][0]-x0)*(dot[d][0]-x0)+(dot[d][1]-y0)*(dot[d][1]-y0));
-    //r>0,d点在圆心内
-    if (r>0) return 1;
-    else if (r<0) return -1;
-    return 0;
-}
-
 SVdot conquer(SVdot *v,SVdot vl,SVdot vr,double** dot) {
     v->linelen=vl.linelen+vr.linelen;
     if (v->linelen>=v->maxlinelen) {
@@ -197,7 +201,7 @@ SVdot conquer(SVdot *v,SVdot vl,SVdot vr,double** dot) {
             if (r==-1) {
                 dr=vr.v[i];
                 break;
-            } else {
+            } else if (r==1) {
                 delline(v,r1,vr.v[i]);
             }
             i=rdot[i].more;
@@ -234,7 +238,6 @@ SVdot conquer(SVdot *v,SVdot vl,SVdot vr,double** dot) {
         }
         if (dl==-1) r1=dr;
         else l1=dl;
-        //下条lr-edge当前是一条直线，就会死循环
     }
     delete[] ldot;
     delete[] rdot;
@@ -336,7 +339,7 @@ SVdot calDelauney(double **dot,int lens) {
         j++;
     }
     qDebug()<<"------------------------";
-    return vdot;
+    return divide(&vdot,dot);;
 }
 
 
