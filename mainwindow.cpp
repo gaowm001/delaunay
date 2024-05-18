@@ -6,6 +6,7 @@
 #include <QPainter>
 #include <QPixmap>
 #include <Qtime>
+#include <QElapsedTimer>
 #include "delaunay.h"
 
 MainWindow::MainWindow(QWidget *parent)
@@ -35,26 +36,26 @@ void MainWindow::on_ButtonOpen_clicked()
 void MainWindow::on_ButtonOut_clicked()
 {
     QString sw="pvA";
-    filename=ui->lineEdit->text();
-    if (ui->checkBoxq->isChecked()) sw+="q";
-    if (ui->checkBoxV->isChecked()) sw+=QString::number(ui->SpinBoxV->value())+"V";
-    if (ui->checkBoxa->isChecked()) sw+="a"+QString::number(ui->SpinBoxa->value());
-    QByteArray bsw=sw.toLocal8Bit(),bfile=filename.absoluteFilePath().toLocal8Bit();
-    char* csw=bsw.data(),*file=bfile.data();
-    tetgenio in,out;
-//    tetgenbehavior *tsw;
-//    tsw->parse_commandline(csw);
-    if (!in.load_poly(file)) {
-        QMessageBox::information(nullptr,"提示","打开文件失败");
-        return;
-    }
-    tetrahedralize(csw,&in,&out);
-    out.save_poly("answer");
-    out.save_nodes("answer");
-    out.save_elements("answer");
-    out.save_faces("answer");
-    out.save_faces2smesh("answer");
-    QMessageBox::information(nullptr,"提示","OK");
+//    filename=ui->lineEdit->text();
+//    if (ui->checkBoxq->isChecked()) sw+="q";
+//    if (ui->checkBoxV->isChecked()) sw+=QString::number(ui->SpinBoxV->value())+"V";
+//    if (ui->checkBoxa->isChecked()) sw+="a"+QString::number(ui->SpinBoxa->value());
+//    QByteArray bsw=sw.toLocal8Bit(),bfile=filename.absoluteFilePath().toLocal8Bit();
+//    char* csw=bsw.data(),*file=bfile.data();
+//    tetgenio in,out;
+// //    tetgenbehavior *tsw;
+// //    tsw->parse_commandline(csw);
+//    if (!in.load_poly(file)) {
+//        QMessageBox::information(nullptr,"提示","打开文件失败");
+//        return;
+//    }
+//    tetrahedralize(csw,&in,&out);
+//    out.save_poly("answer");
+//    out.save_nodes("answer");
+//    out.save_elements("answer");
+//    out.save_faces("answer");
+//    out.save_faces2smesh("answer");
+//    QMessageBox::information(nullptr,"提示","OK");
 
 }
 
@@ -81,8 +82,11 @@ void MainWindow::on_ButtonRam_clicked()
 
 void MainWindow::on_ButtonCal_clicked()
 {
+   QElapsedTimer t;
+   t.start();
    SVdot vdot=calDelauney(dot,len);
-   vdot=divide(&vdot,dot);
+   qDebug()<<"elaspsd:"<<t.elapsed()<<"ms";
+//   vdot=divide(&vdot,dot);
    QPixmap pixmap(ui->labelImg->width(),ui->labelImg->height());
    pixmap.fill(Qt::white);
    QPainter p;
