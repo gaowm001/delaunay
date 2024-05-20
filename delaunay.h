@@ -26,12 +26,12 @@ typedef struct {
     int linelen=0;
 } SVdot;
 
-bool dcompare(double p1[],double p2[]) {
-    if (p1[0]>p2[0]) return true;
-    if (p1[0]<p2[0]) return false;
-    if (p1[1]>p2[1]) return true;
-    if (p1[1]<p2[1]) return false;
-    return NULL;
+int dcompare(double p1[],double p2[]) {
+    if (p1[0]>p2[0]) return 1;
+    if (p1[0]<p2[0]) return -1;
+    if (p1[1]>p2[1]) return 1;
+    if (p1[1]<p2[1]) return -1;
+    return 0;
 }
 
 double calcos(int a,int b,int c,double **dot,double *f) {//求<BAC
@@ -99,6 +99,11 @@ void choicecan(Scandot *rdot,int a1,int a2,SVdot vl,double **dot,int *dl,bool l)
     int j=0;*dl=-1;
     for (int i=0;i<vl.vlen;i++) {
         if ((vl.v[i]==a1)||(vl.v[i]==a2)) continue;
+        int i1=0;
+        for (;i1<vl.linelen;i1++) {
+            if ((vl.line[i1][0]==a2&&vl.line[i1][1]==vl.v[i])||(vl.line[i1][1]==a2&&vl.line[i1][0]==vl.v[i])) break;
+        }
+        if (i1==vl.linelen) continue;
         double f;
         double r=calcos(a2,a1,vl.v[i],dot,&f);
 //        if (f==0) {qDebug()<<"same line";}
@@ -127,14 +132,14 @@ void choicecan(Scandot *rdot,int a1,int a2,SVdot vl,double **dot,int *dl,bool l)
                 }
                 j=rdot[j].more;
             } else {
+                rdot[i].more=j;rdot[i].less=rdot[j].less;
                 if (rdot[j].less==-1) {
-                    rdot[i].more=j;rdot[i].less=-1;
-                    rdot[j].less=i;
                     *dl=i;
                 } else {
-                    rdot[i].less=j;rdot[i].more=rdot[j].more;
-                    rdot[rdot[j].more].less=i;rdot[j].more=i;
+//                    rdot[i].less=j;rdot[i].more=rdot[j].more;
+                    rdot[rdot[j].less].more=i;
                 }
+                rdot[j].less=i;
                 break;
             }
         }
@@ -180,6 +185,8 @@ SVdot conquer(SVdot *v,SVdot vl,SVdot vr,double** dot) {
     if (v->linelen>=v->maxlinelen) {
         v->maxlinelen=v->maxlinelen*2;
         int** temp=new int*[v->maxlinelen];
+        if (temp==nullptr)
+            return vl;
         memcpy(temp,v->line,sizeof (v->line)*(v->linelen));
         delete[] v->line;
         v->line=temp;
@@ -232,7 +239,7 @@ SVdot conquer(SVdot *v,SVdot vl,SVdot vr,double** dot) {
             } else if (r==-1) {
                dl=-1;
             } else {
-                qDebug()<<"lrcircle:"<<l1<<","<<r1<<","<<vl.v[i]<<","<<vl.v[ldot[i].more];
+                qDebug()<<"lrcircle:"<<l1<<","<<r1<<","<<dl<<","<<dr;
                 break;
             }
         }
@@ -257,14 +264,18 @@ SVdot divide(SVdot *vdot,double **dot) {
         vr.v=vdot->v+vl.vlen;
         vr.maxlinelen=vr.vlen*2;
         vr.line=new int*[vr.maxlinelen];
-        return conquer(vdot,divide(&vl,dot),divide(&vr,dot),dot);
+        vl=divide(&vl,dot);
+        vr=divide(&vr,dot);
+        return conquer(vdot,vl,vr,dot);
     } else {
         if (vdot->vlen==2) {
             vdot->linelen=1;
             vdot->line[0]=new int[2];
             vdot->line[0][0]=vdot->v[0];
             vdot->line[0][1]=vdot->v[1];
-        } else {
+        } else {//处理三点同线
+            double f,r=calcos(vdot->v[0],vdot->v[1],vdot->v[2],dot,&f);
+            if (f==0) {qDebug()<<"same line";}
             vdot->linelen=3;
             vdot->line[0]=new int[2];
             vdot->line[0][0]=vdot->v[0];
@@ -287,8 +298,9 @@ SVdot calDelauney(double **dot,int lens) {
 
     for (int i=1;i<lens;i++) {
         int j=dm;
-        bool f=dcompare(dot[i],dot[j]);
-        if (f) {
+        int f=dcompare(dot[i],dot[j]);
+        if (f==0) {qDebug()<<"same position!";break;}
+        if (f==1) {
             while (true) {
                 if (chain[j].more==-1) {
                     chain[i].less=j;chain[i].more=-1;
@@ -296,7 +308,9 @@ SVdot calDelauney(double **dot,int lens) {
                     dr=i;
                     break;
                 }
-                if (!dcompare(dot[i],dot[chain[j].more])) {
+                f=dcompare(dot[i],dot[chain[j].more]);
+                if (f==0) {qDebug()<<"same position!";break;}
+                if (f<0) {
                     chain[i].less=j;chain[i].more=chain[j].more;
                     chain[chain[j].more].less=i;chain[j].more=i;
                     break;
@@ -312,7 +326,9 @@ SVdot calDelauney(double **dot,int lens) {
                     dl=i;
                     break;
                 }
-                if (dcompare(dot[i],dot[chain[j].less])) {
+                f=dcompare(dot[i],dot[chain[j].less]);
+                if (f==0) {qDebug()<<"same position!";break;}
+                if (f>0) {
                     chain[i].more=j;chain[i].less=chain[j].less;
                     chain[chain[j].less].more=i;chain[j].less=i;
                     break;
@@ -342,5 +358,10 @@ SVdot calDelauney(double **dot,int lens) {
     return divide(&vdot,dot);;
 }
 
+void delvdot(SVdot vdot) {
+    delete[] vdot.v;
+    for (int i=0;i<<vdot.linelen;i++) delete[] vdot.line[i];
+    delete[] vdot.line;
+}
 
 #endif // DELAUNAY_H

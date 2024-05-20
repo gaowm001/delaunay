@@ -3,7 +3,7 @@
 
 #include <QMainWindow>
 #include <QString>
-#include <tetgen.h>
+//#include <tetgen.h>
 #include <QFileDialog>
 
 QT_BEGIN_NAMESPACE
@@ -21,9 +21,6 @@ public:
     ~MainWindow();
 
 private slots:
-    void on_ButtonOpen_clicked();
-
-    void on_ButtonOut_clicked();
 
     void on_ButtonRam_clicked();
 
