@@ -52,7 +52,7 @@ void MainWindow::on_ButtonCal_clicked()
    t.start();
    SVdot vdot=calDelauney(dot,len);
    qDebug()<<"elaspsd:"<<t.elapsed()<<"ms";
-//   vdot=divide(&vdot,dot);
+   vdot=divide(&vdot,dot);
    QPixmap pixmap(ui->labelImg->width(),ui->labelImg->height());
    pixmap.fill(Qt::white);
    QPainter p;

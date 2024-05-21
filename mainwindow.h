@@ -10,7 +10,7 @@ QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
 
-const int len=20;
+const int len=100;
 
 class MainWindow : public QMainWindow
 {
