@@ -152,13 +152,8 @@ void insertline(SVdot *v,int a1,int a2) {
         v->line=temp;
     }
     v->line[v->linelen]=new int[2];
-    if (a1>a2) {
-        v->line[v->linelen][0]=a2;
-        v->line[v->linelen][1]=a1;
-    } else {
-        v->line[v->linelen][0]=a1;
-        v->line[v->linelen][1]=a2;
-    }
+    v->line[v->linelen][0]=a1;
+    v->line[v->linelen][1]=a2;
     v->linelen++;
 }
 
@@ -375,6 +370,25 @@ void delvdot(SVdot vdot) {
     delete[] vdot.v;
     for (int i=0;i<vdot.linelen;i++) delete[] vdot.line[i];
     delete[] vdot.line;
+}
+
+bool checkDelauney(SVdot v,double** dot) {
+    for (int i=0;i<v.linelen-2;i++) {
+        int a=v.line[i][0],b=v.line[i][1];
+        for (int j=i+1;j<v.linelen-1;j++) {
+            if (v.line[j][0]==a||v.line[j][1]==a||v.line[j][0]==b||v.line[j][1]==b) continue;
+            double f,
+            r1=sin(calcos(v.line[j][0],a,v.line[j][1],dot,&f)),
+            r2=sin(calcos(v.line[j][0],b,v.line[j][1],dot,&f)),
+            r3=sin(calcos(a,v.line[j][1],b,dot,&f)),
+            r4=sin(calcos(a,v.line[j][0],b,dot,&f));
+            if (r1*r2<=0&&r3*r4<=0) {
+                qDebug()<<"line1("<<QString::number(a)<<","<<QString::number(b)<<"),line2("<<QString::number(v.line[j][0])<<","<<QString::number(v.line[j][1])<<")";
+                return false;
+            }
+        }
+    }
+    return true;
 }
 
 #endif // DELAUNAY_H

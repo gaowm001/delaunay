@@ -16,6 +16,9 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
     dot=(double**)malloc(len*sizeof(double*));
     for (int i=0;i<len;i++) dot[i]=(double*)malloc(2*sizeof(double));
+    QPixmap pixmap(ui->labelImg->width(),ui->labelImg->height());
+    pixmap.fill(Qt::white);
+    ui->labelImg->setPixmap(pixmap);
 }
 
 MainWindow::~MainWindow()
@@ -33,16 +36,20 @@ void MainWindow::on_ButtonRam_clicked()
     p.setPen(Qt::blue);
     QString s;
     for (int i=0;i<len;i++) {
-        dot[i][0]=QRandomGenerator::global()->bounded(ui->labelImg->width()-20);
-        dot[i][1]=QRandomGenerator::global()->bounded(ui->labelImg->height()-20);
-//        dot[i][0]=QRandomGenerator::global()->bounded(len);
-//        dot[i][1]=QRandomGenerator::global()->bounded(len);
+        if (len<ui->labelImg->width()-20) {
+            dot[i][0]=QRandomGenerator::global()->bounded(ui->labelImg->width()-20);
+            dot[i][1]=QRandomGenerator::global()->bounded(ui->labelImg->height()-20);
+        } else {
+            dot[i][0]=QRandomGenerator::global()->bounded(len);
+            dot[i][1]=QRandomGenerator::global()->bounded(len);
+        }
         p.drawRect(dot[i][0]+10,ui->labelImg->height()-dot[i][1]-10,2,2);
         p.drawText(dot[i][0]+10,ui->labelImg->height()-dot[i][1]-10,QString::number(i));
         s+="("+QString::number(dot[i][0])+","+QString::number(dot[i][1])+"),";
     }
     p.end();
     ui->labelImg->setPixmap(pixmap);
+    ui->ButtonCal->setEnabled(true);
     qDebug()<<s;
 }
 
@@ -69,5 +76,8 @@ void MainWindow::on_ButtonCal_clicked()
    }
    p.end();
    ui->labelImg->setPixmap(pixmap);
+   qApp->processEvents();
+   if (checkDelauney(vdot,dot)) QMessageBox::information(nullptr,"Info","Delauney is checked sucess!");
+   else QMessageBox::information(nullptr,"Info","Delauney is checked error!");
    delvdot(vdot);
 }

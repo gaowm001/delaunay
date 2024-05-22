@@ -24,7 +24,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>图</string>
+     <string/>
     </property>
     <property name="textFormat">
      <enum>Qt::PlainText</enum>
@@ -43,13 +43,16 @@
      </rect>
     </property>
     <property name="text">
-     <string>产生点(&amp;A)</string>
+     <string>Random(&amp;R)</string>
     </property>
     <property name="shortcut">
-     <string>Ctrl+A</string>
+     <string>Ctrl+R</string>
     </property>
    </widget>
    <widget class="QPushButton" name="ButtonCal">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
     <property name="geometry">
      <rect>
       <x>770</x>
@@ -59,10 +62,10 @@
      </rect>
     </property>
     <property name="text">
-     <string>生成(&amp;P)</string>
+     <string>Delauny(&amp;D)</string>
     </property>
     <property name="shortcut">
-     <string>Ctrl+P</string>
+     <string>Ctrl+D</string>
     </property>
    </widget>
   </widget>
