@@ -37,10 +37,10 @@ int dcompare(double p1[],double p2[]) {
 }
 
 double calcos(int a,int b,int c,double **dot,double *f) {//求<BAC
-    double abx=dot[b][0]-dot[a][0],
-           aby=dot[b][1]-dot[a][1],
-           acx=dot[c][0]-dot[a][0],
-           acy=dot[c][1]-dot[a][1];
+    double abx=dot[b][0]-dot[a][0];
+    double aby=dot[b][1]-dot[a][1];
+    double acx=dot[c][0]-dot[a][0];
+    double acy=dot[c][1]-dot[a][1];
     double r=acos((abx*acx+aby*acy)/sqrt((abx*abx+aby*aby)*(acx*acx+acy*acy)));
     *f=abx*acy-acx*aby;
     return r;
@@ -48,11 +48,14 @@ double calcos(int a,int b,int c,double **dot,double *f) {//求<BAC
 
 int isincircle(int a,int b,int c,int d,double** dot) {//d在a,b,c的圆内
     double x0,y0;
-    double x1=dot[a][0],x2=dot[b][0],x3=dot[c][0],y1=dot[a][1],y2=dot[b][1],y3=dot[c][1];
+    double x1=dot[a][0];
+    double x2=dot[b][0];
+    double x3=dot[c][0];
+    double y1=dot[a][1];
+    double y2=dot[b][1];
+    double y3=dot[c][1];
     double xx=2*((y1-y2)*(x1-x3)-(x1-x2)*(y1-y3));
-    if (xx==0) {
-        qDebug()<<"line";
-    }
+    if (xx==0) { qDebug()<<"line";  }
     x0=((y1-y2)*(x1*x1-x3*x3+y1*y1-y3*y3)-(y1-y3)*(x1*x1-x2*x2+y1*y1-y2*y2))/xx;
     y0=((x1-x3)*(x1*x1-x2*x2+y1*y1-y2*y2)-(x1-x2)*(x1*x1-x3*x3+y1*y1-y3*y3))/xx;
     double r=(x1-x0)*(x1-x0) + (y1-y0)*(y1-y0);
@@ -249,16 +252,14 @@ SVdot conquer(SVdot *v,SVdot *vl,SVdot *vr,double** dot) {
 
 SVdot divide(SVdot *vdot,double **dot) {
     if (vdot->vlen>3) {
-        SVdot v[2];
-        v[0].vlen=vdot->vlen/2;
-        v[0].v=vdot->v;
-        v[1].vlen=vdot->vlen-v[0].vlen;
-        v[1].v=vdot->v+v[0].vlen;
-        #pragma omp parallel for
-        for (int i=0;i<2;i++) {
-            v[i]=divide(&v[i],dot);
-        }
-        return conquer(vdot,&v[0],&v[1],dot);
+        SVdot vl,vr;
+        vl.vlen=vdot->vlen/2;
+        vl.v=vdot->v;
+        vr.vlen=vdot->vlen-vl.vlen;
+        vr.v=vdot->v+vl.vlen;
+        vl=divide(&vl,dot);
+        vr=divide(&vr,dot);
+        return conquer(vdot,&vl,&vr,dot);
     } else {
         if (vdot->vlen==2) {            
             vdot->linelen=1;
