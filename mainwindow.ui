@@ -68,6 +68,22 @@
      <string>Ctrl+D</string>
     </property>
    </widget>
+   <widget class="QPushButton" name="ButtonTest">
+    <property name="geometry">
+     <rect>
+      <x>770</x>
+      <y>120</y>
+      <width>75</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Test(&amp;T)</string>
+    </property>
+    <property name="shortcut">
+     <string>Ctrl+T</string>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
