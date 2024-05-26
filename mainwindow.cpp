@@ -75,15 +75,14 @@ void MainWindow::on_ButtonCal_clicked()
    QElapsedTimer t;
    t.start();
    SVdot vdot=calDelaunay(dot);
-   qDebug()<<"elasped:"<<t.elapsed()<<"ms";
-   vdot=divide(&vdot,dot);
+   ui->textEdit->append("elasped:"+QString::number(t.elapsed())+"ms");
+   t.invalidate();
    QPixmap pixmap(ui->labelImg->width(),ui->labelImg->height());
    pixmap.fill(Qt::white);
    QPainter p;
    p.begin(&pixmap);
    p.setPen(Qt::red);
    for (int i=0;i<vdot.linelen;i++) {
-       if (vdot.line[i]!=nullptr)
        p.drawLine(dot[vdot.line[i][0]][0]+10,ui->labelImg->height()-dot[vdot.line[i][0]][1]-10,dot[vdot.line[i][1]][0]+10,ui->labelImg->height()-dot[vdot.line[i][1]][1]-10);
    }
    p.setPen(Qt::blue);
@@ -94,31 +93,33 @@ void MainWindow::on_ButtonCal_clicked()
    p.end();
    ui->labelImg->setPixmap(pixmap);
    qApp->processEvents();
-//   if (checkDelaunay1(vdot,dot)) QMessageBox::information(nullptr,"Info","Delauney is checked sucess!");//判断空圆
-//   else QMessageBox::information(nullptr,"Info","Delauney is checked error!");
-//   if (checkDelaunay(vdot,dot)) QMessageBox::information(nullptr,"Info","Delauney is checked sucess!");//判断相交
-//   else QMessageBox::information(nullptr,"Info","Delauney is checked error!");
+   if (checkDelaunay1(vdot,dot)) ui->textEdit->append("No hollow circle") ;//判断空圆
+   else QMessageBox::information(nullptr,"Info","Delauney is checked error!");
+   qApp->processEvents();
+   if (checkDelaunay(vdot,dot)) ui->textEdit->append("No intersect");//判断相交
+   else QMessageBox::information(nullptr,"Info","Delauney is checked error!");
    delvdot(vdot);
 }
 
 void MainWindow::on_ButtonTest_clicked()
 {
-    int count=10,j1=0,j2=0,k=0;
-    int test[count];
-    QElapsedTimer t;
+    int count=1000,j1=0,j2=0,k=0;
+    int *test=new int[count];
     QString s1;
     for (int i=0;i<count;i++) {
         QString s;
     //        int adot[10][2]={17,77,242,266,221,18,115,177,0,94,130,174,199,191,100,24,260,273,0,223};
     //        for (int j=0;j<len;j++) {dot[j][0]=adot[j][0];dot[j][1]=adot[j][1];}
         for (int j=0;j<len;j++) {
-            dot[j][0]=QRandomGenerator::global()->bounded(len*30);
-            dot[j][1]=QRandomGenerator::global()->bounded(len*30);
+            dot[j][0]=QRandomGenerator::global()->bounded(len);
+            dot[j][1]=QRandomGenerator::global()->bounded(len);
             s+="("+QString::number(dot[j][0])+","+QString::number(dot[j][1])+"),";
         }
+        QElapsedTimer t;
         t.start();
         SVdot vdot=calDelaunay(dot);
         k+=t.elapsed();
+        t.invalidate();
         test[i]=0;
         if (!checkDelaunay1(vdot,dot)) {
             QPixmap pixmap(ui->labelImg->width(),ui->labelImg->height());
@@ -127,13 +128,12 @@ void MainWindow::on_ButtonTest_clicked()
             p.begin(&pixmap);
             p.setPen(Qt::red);
             for (int i=0;i<vdot.linelen;i++) {
-                if (vdot.line[i]!=nullptr)
-                p.drawLine(dot[vdot.line[i][0]][0]+10,ui->labelImg->height()-dot[vdot.line[i][0]][1]-10,dot[vdot.line[i][1]][0]+10,ui->labelImg->height()-dot[vdot.line[i][1]][1]-10);
+                p.drawLine(dot[vdot.line[i][0]][0]*(ui->labelImg->width()-20)/len+10,ui->labelImg->height()-dot[vdot.line[i][0]][1]*(ui->labelImg->height()-20)/len-10,dot[vdot.line[i][1]][0]*(ui->labelImg->width()-20)/len+10,ui->labelImg->height()-dot[vdot.line[i][1]][1]*(ui->labelImg->height()-20)/len-10);
             }
             p.setPen(Qt::blue);
             for (int i=0;i<len;i++) {
-                p.drawRect(dot[i][0]+10,ui->labelImg->height()-dot[i][1]-10,2,2);
-                p.drawText(dot[i][0]+10,ui->labelImg->height()-dot[i][1]-10,QString::number(i));
+                p.drawRect(dot[i][0]*(ui->labelImg->width()-20)/len+10,ui->labelImg->height()-dot[i][1]*(ui->labelImg->height()-20)/len-10,2,2);
+                p.drawText(dot[i][0]*(ui->labelImg->width()-20)/len+10,ui->labelImg->height()-dot[i][1]*(ui->labelImg->height()-20)/len-10,QString::number(i));
             }
             p.end();
             ui->labelImg->setPixmap(pixmap);
@@ -147,11 +147,13 @@ void MainWindow::on_ButtonTest_clicked()
             j1++;
             qDebug()<<QString::number(i)<<":circle error";
         }
-        if (!checkDelaunay(vdot,dot)) {test[i]=2;j2++;qDebug()<<QString::number(i)<<":line error";
+        if (!checkDelaunay(vdot,dot)) {test[i]=2;j2++;ui->textEdit->append(QString::number(i)+":line error");
         }
-        qDebug()<<QString::number(i)<<" end";
         delvdot(vdot);
+        ui->textEdit->append(QString::number(i)+" end");
+        qApp->processEvents();
     }
     qDebug()<<s1;
-    qDebug()<<"len:"<<len<<"total:"<<count<<",circle error:"<<j1<<",line error:"<<j2<<",average time(ms):"<<k/count;
+    ui->textEdit->append("len:"+QString::number(len)+" total:"+QString::number(count)+" circle error:"+QString::number(j1)+" line error:"+QString::number(j2)+" average time(ms):"+QString::number(k/count));
+    delete[] test;
 }

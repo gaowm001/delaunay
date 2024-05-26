@@ -1,11 +1,14 @@
 #ifndef DELAUNAY_H
 #define DELAUNAY_H
 
+#define iszero(x) fabs(x)<1e-14
+
 #include <stdio.h>
 #include <math.h>
 #include <string>
 #include <QDebug>
 #include <omp.h>
+
 
 typedef struct {
     int more=-1;
@@ -55,14 +58,15 @@ int isincircle(int a,int b,int c,int d,double** dot) {//d在a,b,c的圆内
     double y2=dot[b][1];
     double y3=dot[c][1];
     double xx=2*((y1-y2)*(x1-x3)-(x1-x2)*(y1-y3));
-    if (xx==0) { qDebug()<<"line";  }
+    if (iszero(xx)) { qDebug()<<"line";  }
     x0=((y1-y2)*(x1*x1-x3*x3+y1*y1-y3*y3)-(y1-y3)*(x1*x1-x2*x2+y1*y1-y2*y2))/xx;
     y0=((x1-x3)*(x1*x1-x2*x2+y1*y1-y2*y2)-(x1-x2)*(x1*x1-x3*x3+y1*y1-y3*y3))/xx;
     double r=(x1-x0)*(x1-x0) + (y1-y0)*(y1-y0);
     double r1=((dot[d][0]-x0)*(dot[d][0]-x0)+(dot[d][1]-y0)*(dot[d][1]-y0));
     //r>r1,d点在圆心内
-    if (r-r1>1e-7) return 1;
-    else if (r-r1<1e-7) return -1;
+    if (iszero(r-r1)) return 0;
+    if (r>r1) return 1;
+    else if (r<r1) return -1;
     return 0;
 }
 
@@ -108,13 +112,12 @@ void choicedot(SVdot vl,SVdot vr,double **dot,int *l,int *r) {
 void choicecan(Scandot *rdot,int a1,int a2,SVdot vl,double **dot,int *dl,bool l) {
     int j=0;*dl=-1;
       for (int i=0;i<vl.linelen;i++) {
-          if (vl.line[i]==nullptr) continue;
           if (vl.line[i][0]==a2) rdot[i].dot=vl.line[i][1];
           else if (vl.line[i][1]==a2) rdot[i].dot=vl.line[i][0];
           else continue;
         double f;
         double r=calcos(a2,a1,rdot[i].dot,dot,&f);
-        if ((l&&(f<0))||((!l)&&(f>0))||(f==0)||r==0) continue;
+        if (iszero(f)||(l&&(f<0))||((!l)&&(f>0))) continue;
         rdot[i].r=r;
         if (*dl==-1) {
             *dl=i;
@@ -124,14 +127,14 @@ void choicecan(Scandot *rdot,int a1,int a2,SVdot vl,double **dot,int *dl,bool l)
         }
         j=*dl;
         while (true) {
-            f=false;
-            if (r==rdot[j].r) {//角度相同，离a2近的在前
+            f=0;
+            if (iszero(r-rdot[j].r)) {//角度相同，离a2近的在前
                     if ((dot[rdot[i].dot][0]-dot[a2][0])*(dot[rdot[i].dot][0]-dot[a2][0])+(dot[rdot[i].dot][1]-dot[a2][1])*(dot[rdot[i].dot][0]-dot[a2][0])
                             >(dot[rdot[j].dot][0]-dot[a2][0])*(dot[rdot[j].dot][0]-dot[a2][0])+(dot[rdot[j].dot][1]-dot[a2][1])*(dot[rdot[j].dot][0]-dot[a2][0]))
-                    f=true;
+                    f=1;
                 qDebug()<<"samecircle:"<<rdot[i].dot<<","<<rdot[j].dot<<","<<a1<<","<<a2;
             }
-            if ((r>rdot[j].r)||(f)) {
+            if ((r>rdot[j].r)||(f==1)) {
                 if (rdot[j].more==-1) {
                     rdot[i].less=j;rdot[i].more=-1;
                     rdot[j].more=i;
@@ -181,128 +184,129 @@ void delline(SVdot *v,int a1,int a2) {
     }
 }
 
-SVdot conquer(SVdot *v,SVdot *vl,SVdot *vr,double** dot) {
-    v->linelen=vl->linelen+vr->linelen;
-    if (v->linelen>=v->maxlinelen) {
-        v->maxlinelen=v->linelen*2;
-        v->line=new int*[v->maxlinelen];
-    }
-    v->linelen=vl->linelen+vr->linelen;
-    memcpy(v->line,vl->line,(vl->linelen)*sizeof(vl->line));
-    memcpy(v->line+vl->linelen,vr->line,(vr->linelen)*sizeof(vr->line));
-    int head,dl=-1,dr=-1;
-    int l1=vl->v[vl->vlen-1];
-    int r1=vr->v[0];
-    choicedot(*vl,*vr,dot,&l1,&r1);
-    Scandot *rdot=new Scandot[vr->linelen],*ldot=new Scandot[vl->linelen];
-    while (true) {
-        choicecan(rdot,l1,r1,*vr,dot,&head,false);
-        int i=head;
-        while (i!=-1) {//右边
-            if (rdot[i].more==-1) {dr=rdot[i].dot;break;}
-            int r=isincircle(l1,r1,rdot[i].dot,rdot[rdot[i].more].dot,dot);
-            if (r==-1) {
-                dr=rdot[i].dot;
-                break;
-            } else if (r==1) {
-                delline(v,r1,rdot[i].dot);
-                vr->line[i]=nullptr;
-            }
-            i=rdot[i].more;
-        }
-        if (head==-1) dr=-1;
-        choicecan(ldot,r1,l1,*vl,dot,&head,true);
-        i=head;
-        while (i!=-1) {//左边
-            if (ldot[i].more==-1) {dl=ldot[i].dot;break;}
-            int r=isincircle(l1,r1,ldot[i].dot,ldot[ldot[i].more].dot,dot);
-            if (r==-1) {
-                dl=ldot[i].dot;
-                break;
-            } else {
-                delline(v,l1,ldot[i].dot);
-                vl->line[i]=nullptr;
-            }
-            i=ldot[i].more;
-        }
-        if (head==-1) dl=-1;
-        insertline(v,l1,r1);
-        if ((dl==-1)&&(dr==-1)) {//无候选点，合并完成
-            break;
-        }
-        if ((dl>-1)&&(dr>-1)) {
-            int r=isincircle(r1,l1,dr,dl,dot);
-            if (r==1) {//dl在圆内，选择dl
-               dr=-1;
-            } else if (r==-1) {
-               dl=-1;
-            } else {
-                qDebug()<<"lrcircle:"<<l1<<","<<r1<<","<<dl<<","<<dr;
-            }
-        }
-        if (dl==-1) r1=dr;
-        else l1=dl;
-    }
-    delete[] ldot;
-    delete[] rdot;
-    delete[] vl->line;
-    delete[] vr->line;
-    return *v;
-}
-
-SVdot divide(SVdot *vdot,double **dot) {
-    if (vdot->vlen>3) {
+SVdot divide(SVdot vdot,double **dot) {
+    if (vdot.vlen>3) {
         SVdot vl,vr;
-        vl.vlen=vdot->vlen/2;
-        vl.v=vdot->v;
-        vr.vlen=vdot->vlen-vl.vlen;
-        vr.v=vdot->v+vl.vlen;
-        vl=divide(&vl,dot);
-        vr=divide(&vr,dot);
-        return conquer(vdot,&vl,&vr,dot);
+        vl.vlen=vdot.vlen/2;
+        vl.v=vdot.v;
+        vr.vlen=vdot.vlen-vl.vlen;
+        vr.v=vdot.v+vl.vlen;
+        vl=divide(vl,dot);
+        vr=divide(vr,dot);
+        SVdot v;
+        v.vlen=vl.vlen+vr.vlen;
+        v.v=vl.v;
+        v.maxlinelen=(vl.linelen+vr.linelen);
+        v.line=new int*[v.maxlinelen];
+        int head,dl=-1,dr=-1;
+        int l1=vl.v[vl.vlen-1];
+        int r1=vr.v[0];
+        choicedot(vl,vr,dot,&l1,&r1);
+        Scandot *rdot=new Scandot[vr.linelen],*ldot=new Scandot[vl.linelen];
+        while (true) {
+            choicecan(rdot,l1,r1,vr,dot,&head,false);
+            int i=head;
+            while (i!=-1) {//右边
+                if (rdot[i].more==-1) {dr=rdot[i].dot;break;}
+                int r=isincircle(l1,r1,rdot[i].dot,rdot[rdot[i].more].dot,dot);
+                if (r==-1) {
+                    dr=rdot[i].dot;
+                    break;
+                } else if (r==1) {
+                    delline(&vr,r1,rdot[i].dot);
+                }
+                i=rdot[i].more;
+            }
+            if (head==-1) dr=-1;
+            choicecan(ldot,r1,l1,vl,dot,&head,true);
+            i=head;
+            while (i!=-1) {//左边
+                if (ldot[i].more==-1) {dl=ldot[i].dot;break;}
+                int r=isincircle(l1,r1,ldot[i].dot,ldot[ldot[i].more].dot,dot);
+                if (r==-1) {
+                    dl=ldot[i].dot;
+                    break;
+                } else {
+                    delline(&vl,l1,ldot[i].dot);
+                }
+                i=ldot[i].more;
+            }
+            if (head==-1) dl=-1;
+            insertline(&v,l1,r1);
+            if ((dl==-1)&&(dr==-1)) {//无候选点，合并完成
+                break;
+            }
+            if ((dl>-1)&&(dr>-1)) {
+                int r=isincircle(r1,l1,dr,dl,dot);
+                if (r==1) {//dl在圆内，选择dl
+                   dr=-1;
+                } else if (r==-1) {
+                   dl=-1;
+                } else {
+//                    qDebug()<<"lrcircle:"<<l1<<","<<r1<<","<<dl<<","<<dr;
+                }
+            }
+            if (dl==-1) r1=dr;
+            else l1=dl;
+        }
+        if (v.linelen+vl.linelen+vr.linelen>v.maxlinelen) {
+            v.maxlinelen=(v.linelen+vl.linelen+vr.linelen);
+            int **temp=new int*[v.maxlinelen];
+            memcpy(temp,v.line,(v.linelen)*sizeof(v.line));
+            delete[] v.line;
+            v.line=temp;
+        }
+        memcpy(v.line+v.linelen,vl.line,(vl.linelen)*sizeof(vl.line));
+        memcpy(v.line+v.linelen+vl.linelen,vr.line,(vr.linelen)*sizeof(vr.line));
+        v.linelen=v.linelen+vl.linelen+vr.linelen;
+        delete[] ldot;
+        delete[] rdot;
+        delete[] vl.line;
+        delete[] vr.line;
+        return v;
     } else {
-        if (vdot->vlen==2) {            
-            vdot->linelen=1;
-            vdot->maxlinelen=vdot->linelen*2;
-            vdot->line=new int*[vdot->maxlinelen];
-            vdot->line[0]=new int[2];
-            vdot->line[0][0]=vdot->v[0];
-            vdot->line[0][1]=vdot->v[1];
+        if (vdot.vlen==2) {
+            vdot.linelen=1;
+            vdot.maxlinelen=vdot.linelen*2;
+            vdot.line=new int*[vdot.maxlinelen];
+            vdot.line[0]=new int[2];
+            vdot.line[0][0]=vdot.v[0];
+            vdot.line[0][1]=vdot.v[1];
         } else {//处理三点同线
-            double f,r=calcos(vdot->v[0],vdot->v[1],vdot->v[2],dot,&f);
-            if (f==0||r==0) {
+            double f,r=calcos(vdot.v[0],vdot.v[1],vdot.v[2],dot,&f);
+            if (iszero(f)) {
 //                qDebug()<<"same line";
-                vdot->linelen=2;
-                vdot->maxlinelen=vdot->linelen*2;
-                vdot->line=new int*[vdot->maxlinelen];
-                vdot->line[0]=new int[2];
-                vdot->line[0][0]=vdot->v[0];
-                vdot->line[0][1]=vdot->v[1];
-                vdot->line[1]=new int[2];
-                vdot->line[1][0]=vdot->v[1];
-                vdot->line[1][1]=vdot->v[2];
+                vdot.linelen=2;
+                vdot.maxlinelen=vdot.linelen*2;
+                vdot.line=new int*[vdot.maxlinelen];
+                vdot.line[0]=new int[2];
+                vdot.line[0][0]=vdot.v[0];
+                vdot.line[0][1]=vdot.v[1];
+                vdot.line[1]=new int[2];
+                vdot.line[1][0]=vdot.v[1];
+                vdot.line[1][1]=vdot.v[2];
             } else {
-                vdot->linelen=3;
-                vdot->maxlinelen=vdot->linelen*2;
-                vdot->line=new int*[vdot->maxlinelen];
-                vdot->line[0]=new int[2];
-                vdot->line[0][0]=vdot->v[0];
-                vdot->line[0][1]=vdot->v[1];
-                vdot->line[1]=new int[2];
-                vdot->line[1][0]=vdot->v[0];
-                vdot->line[1][1]=vdot->v[2];
-                vdot->line[2]=new int[2];
-                vdot->line[2][0]=vdot->v[1];
-                vdot->line[2][1]=vdot->v[2];
+                vdot.linelen=3;
+                vdot.maxlinelen=vdot.linelen*2;
+                vdot.line=new int*[vdot.maxlinelen];
+                vdot.line[0]=new int[2];
+                vdot.line[0][0]=vdot.v[0];
+                vdot.line[0][1]=vdot.v[1];
+                vdot.line[1]=new int[2];
+                vdot.line[1][0]=vdot.v[0];
+                vdot.line[1][1]=vdot.v[2];
+                vdot.line[2]=new int[2];
+                vdot.line[2][0]=vdot.v[1];
+                vdot.line[2][1]=vdot.v[2];
             }
         }
-        return SVdot(*vdot);
+        return vdot;
     }
 }
 
 SVdot calDelaunay(double **dot) {
     int lens=_msize(dot)/sizeof(dot[0]);
-    chaindot chain[lens];
+    chaindot *chain=new chaindot[lens];
     int dm=0,dl=0,dr=0,sum=lens;
     float dmm=0;
     for (int i=1;i<lens;i++) {
@@ -364,8 +368,6 @@ SVdot calDelaunay(double **dot) {
     SVdot vdot;
     vdot.v=new int[sum];
     vdot.vlen=sum;
-    vdot.linelen=0;
-    vdot.maxlinelen=vdot.vlen*2;
     int i=dl,j=0;
     while (i!=-1) {
 //        qDebug()<<i<<"x,y:"<<dot[i][0]<<","<<dot[i][1];
@@ -374,8 +376,9 @@ SVdot calDelaunay(double **dot) {
         i=chain[i].more;
         j++;
     }
+    delete[] chain;
 //    qDebug()<<"------------------------";
-    return divide(&vdot,dot);
+    return divide(vdot,dot);
 }
 
 void delvdot(SVdot vdot) {

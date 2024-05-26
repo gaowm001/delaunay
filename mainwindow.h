@@ -3,14 +3,12 @@
 
 #include <QMainWindow>
 #include <QString>
-//#include <tetgen.h>
-#include <QFileDialog>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
 
-const int len=10000;
+const int len=30;
 
 class MainWindow : public QMainWindow
 {
@@ -30,7 +28,6 @@ private slots:
 
 private:
     Ui::MainWindow *ui;
-    QFileInfo filename;
     double** dot;
 };
 #endif // MAINWINDOW_H
