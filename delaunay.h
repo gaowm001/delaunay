@@ -1,7 +1,7 @@
 #ifndef DELAUNAY_H
 #define DELAUNAY_H
 
-#define iszero(x) fabs(x)<1e-14
+#define iszero(x) fabs(x)<1e-13
 
 #include <stdio.h>
 #include <math.h>
@@ -65,6 +65,8 @@ int isincircle(int a,int b,int c,int d,double** dot) {//d在a,b,c的圆内
     double r1=((dot[d][0]-x0)*(dot[d][0]-x0)+(dot[d][1]-y0)*(dot[d][1]-y0));
     //r>r1,d点在圆心内
     if (iszero(r-r1)) return 0;
+    if (fabs(r-r1)<0.001)
+    qDebug()<<"isincircle:"<<r-r1;
     if (r>r1) return 1;
     else if (r<r1) return -1;
     return 0;
@@ -75,7 +77,7 @@ void choicedot(SVdot vl,SVdot vr,double **dot,int *l,int *r) {
     for (int i=0;i<vl.vlen;i++) {
         if (vl.v[i]==*l) continue;
         rr=calcos(*l,*r,vl.v[i],dot,&f);
-        if (f==0||rr==0) {//三点同线，选离r点近的
+        if (iszero(f)) {//三点同线，选离r点近的
             if ((dot[vl.v[i]][0]-dot[*r][0])*(dot[vl.v[i]][0]-dot[*r][0])+(dot[vl.v[i]][1]-dot[*r][1])*(dot[vl.v[i]][1]-dot[*r][1])
                     <(dot[*l][0]-dot[*r][0])*(dot[*l][0]-dot[*r][0])+(dot[*l][1]-dot[*r][1])*(dot[*l][1]-dot[*r][1])) {
                *l=vl.v[i];
@@ -92,7 +94,7 @@ void choicedot(SVdot vl,SVdot vr,double **dot,int *l,int *r) {
     for (int i=0;i<vr.vlen;i++) {
         if (vr.v[i]==*r) continue;
         rr=calcos(*l,*r,vr.v[i],dot,&f);
-        if (f==0||rr==0) {//三点同线，选离l点近的
+        if (iszero(f)) {//三点同线，选离l点近的
             if ((dot[vr.v[i]][0]-dot[*l][0])*(dot[vr.v[i]][0]-dot[*l][0])+(dot[vr.v[i]][1]-dot[*l][1])*(dot[vr.v[i]][1]-dot[*l][1])
                     <(dot[*l][0]-dot[*r][0])*(dot[*l][0]-dot[*r][0])+(dot[*l][1]-dot[*r][1])*(dot[*l][1]-dot[*r][1])) {
                *r=vr.v[i];
@@ -414,7 +416,7 @@ bool checkDelaunay1(SVdot v,double ** dot) {
             if (v.v[j]==a||v.v[j]==b) continue;
             int c=v.v[j];
             double f,r=calcos(a,b,c,dot,&f);
-            if (r==0||f==0) {
+            if (iszero(f)) {
                 if (dot[c][0]>dot[a][0]&&dot[c][0]<dot[b][0]) {
                     qDebug()<<"line1("<<QString::number(a)<<","<<QString::number(b)<<"),dot("<<QString::number(c)<<")";
                     return false;
@@ -424,8 +426,10 @@ bool checkDelaunay1(SVdot v,double ** dot) {
                 else if (isincircle(a,b,c,x1,dot)>=0) continue;
                 else x1=c;
                 if (x2==-1) continue;
-                if (isincircle(a,b,c,x2,dot)>0) {
-                    qDebug()<<"line1("<<QString::number(a)<<","<<QString::number(b)<<"),dot("<<QString::number(c)<<","<<QString::number(x2)<<")";
+                double r=isincircle(a,b,c,x2,dot);
+                if (iszero(r)) continue;
+                if (r>0) {
+                    qDebug()<<"line1("<<QString::number(a)<<","<<QString::number(b)<<"),dot("<<QString::number(c)<<","<<QString::number(x2)<<")"<<r;
                     return false;
                 }
             } else {
@@ -433,8 +437,10 @@ bool checkDelaunay1(SVdot v,double ** dot) {
                 else if (isincircle(a,b,c,x2,dot)>=0) continue;
                 else x2=c;
                 if (x1==-1) continue;
-                if (isincircle(a,b,c,x1,dot)>0) {
-                    qDebug()<<"line2("<<QString::number(a)<<","<<QString::number(b)<<"),dot("<<QString::number(c)<<","<<QString::number(x1)<<")";
+                double r=isincircle(a,b,c,x1,dot);
+                if (iszero(r)) continue;
+                if (r>0) {
+                    qDebug()<<"line2("<<QString::number(a)<<","<<QString::number(b)<<"),dot("<<QString::number(c)<<","<<QString::number(x1)<<")"<<r;
                     return false;
                 }
             }
