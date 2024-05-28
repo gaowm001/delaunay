@@ -1,7 +1,7 @@
 #ifndef DELAUNAY_H
 #define DELAUNAY_H
 
-#define iszero(x) fabs(x)<1e-13
+#define iszero(x) fabs(x)<1e-12
 
 #include <stdio.h>
 #include <math.h>
@@ -44,8 +44,9 @@ double calcos(int a,int b,int c,double **dot,double *f) {//求<BAC
     double aby=dot[b][1]-dot[a][1];
     double acx=dot[c][0]-dot[a][0];
     double acy=dot[c][1]-dot[a][1];
-    double r=acos((abx*acx+aby*acy)/sqrt((abx*abx+aby*aby)*(acx*acx+acy*acy)));
     *f=abx*acy-acx*aby;
+//    if (iszero(*f)) return 0;
+    double r=acos((abx*acx+aby*acy)/sqrt((abx*abx+aby*aby)*(acx*acx+acy*acy)));
     return r;
 }
 
@@ -61,14 +62,16 @@ int isincircle(int a,int b,int c,int d,double** dot) {//d在a,b,c的圆内
     if (iszero(xx)) { qDebug()<<"line";  }
     x0=((y1-y2)*(x1*x1-x3*x3+y1*y1-y3*y3)-(y1-y3)*(x1*x1-x2*x2+y1*y1-y2*y2))/xx;
     y0=((x1-x3)*(x1*x1-x2*x2+y1*y1-y2*y2)-(x1-x2)*(x1*x1-x3*x3+y1*y1-y3*y3))/xx;
-    double r=(x1-x0)*(x1-x0) + (y1-y0)*(y1-y0);
-    double r1=((dot[d][0]-x0)*(dot[d][0]-x0)+(dot[d][1]-y0)*(dot[d][1]-y0));
+    double ra=sqrt((x1-x0)*(x1-x0) + (y1-y0)*(y1-y0)),rb=sqrt((x2-x0)*(x2-x0) + (y2-y0)*(y2-y0)),rc=sqrt((x3-x0)*(x3-x0) + (y3-y0)*(y3-y0)),rmax,rmin;
+    if (ra>rb) {rmax=ra;rmin=rb;}
+    else {rmax=rb;rmin=ra;}
+    if (rc>rmax) rmax=rc;
+    if (rc<rmin) rmin=rc;
+    double r1=sqrt((dot[d][0]-x0)*(dot[d][0]-x0)+(dot[d][1]-y0)*(dot[d][1]-y0));
     //r>r1,d点在圆心内
-    if (iszero(r-r1)) return 0;
-    if (fabs(r-r1)<0.001)
-    qDebug()<<"isincircle:"<<r-r1;
-    if (r>r1) return 1;
-    else if (r<r1) return -1;
+    if (iszero(r1-rmin)||iszero(r1-rmax)) return 0;
+    if (r1>rmax) return -1;
+    else if (r1<rmin) return 1;
     return 0;
 }
 
@@ -239,13 +242,13 @@ SVdot divide(SVdot vdot,double **dot) {
                 break;
             }
             if ((dl>-1)&&(dr>-1)) {
-                int r=isincircle(r1,l1,dr,dl,dot);
-                if (r==1) {//dl在圆内，选择dl
-                   dr=-1;
-                } else if (r==-1) {
+                int r=isincircle(r1,l1,dl,dr,dot);
+                if (r==1) {//dr在圆内，选择dr
                    dl=-1;
+                } else if (r==-1) {
+                   dr=-1;
                 } else {
-//                    qDebug()<<"lrcircle:"<<l1<<","<<r1<<","<<dl<<","<<dr;
+                    qDebug()<<"lrcircle:"<<l1<<","<<r1<<","<<dl<<","<<dr;
                 }
             }
             if (dl==-1) r1=dr;
@@ -370,6 +373,7 @@ SVdot calDelaunay(double **dot) {
     SVdot vdot;
     vdot.v=new int[sum];
     vdot.vlen=sum;
+
     int i=dl,j=0;
     while (i!=-1) {
 //        qDebug()<<i<<"x,y:"<<dot[i][0]<<","<<dot[i][1];
@@ -378,8 +382,8 @@ SVdot calDelaunay(double **dot) {
         i=chain[i].more;
         j++;
     }
-    delete[] chain;
-//    qDebug()<<"------------------------";
+    delete[] chain;    
+//    qDebug()<<"------------------------";    
     return divide(vdot,dot);
 }
 
@@ -427,9 +431,9 @@ bool checkDelaunay1(SVdot v,double ** dot) {
                 else x1=c;
                 if (x2==-1) continue;
                 double r=isincircle(a,b,c,x2,dot);
-                if (iszero(r)) continue;
                 if (r>0) {
-                    qDebug()<<"line1("<<QString::number(a)<<","<<QString::number(b)<<"),dot("<<QString::number(c)<<","<<QString::number(x2)<<")"<<r;
+                    qDebug()<<"line1("<<QString::number(a)<<","<<QString::number(b)<<"),dot("<<QString::number(c)<<","<<QString::number(x2)<<")";
+                    double r=isincircle(a,b,c,x2,dot);
                     return false;
                 }
             } else {
@@ -438,9 +442,8 @@ bool checkDelaunay1(SVdot v,double ** dot) {
                 else x2=c;
                 if (x1==-1) continue;
                 double r=isincircle(a,b,c,x1,dot);
-                if (iszero(r)) continue;
                 if (r>0) {
-                    qDebug()<<"line2("<<QString::number(a)<<","<<QString::number(b)<<"),dot("<<QString::number(c)<<","<<QString::number(x1)<<")"<<r;
+                    qDebug()<<"line2("<<QString::number(a)<<","<<QString::number(b)<<"),dot("<<QString::number(c)<<","<<QString::number(x1)<<")";
                     return false;
                 }
             }
