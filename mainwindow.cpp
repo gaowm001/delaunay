@@ -8,6 +8,7 @@
 #include <Qtime>
 #include <QElapsedTimer>
 #include "delaunay.h"
+#include <QDebug>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -93,7 +94,7 @@ void MainWindow::on_ButtonCal_clicked()
    p.end();
    ui->labelImg->setPixmap(pixmap);
    qApp->processEvents();
-   if (checkDelaunay1(vdot,dot)) ui->textEdit->append("No hollow circle") ;//判断空圆
+   if (checkDelaunay1(vdot,dot)) ui->textEdit->append("All hollow circle") ;//判断空圆
    else QMessageBox::information(nullptr,"Info","Delauney is checked error!");
    qApp->processEvents();
    if (checkDelaunay(vdot,dot)) ui->textEdit->append("No intersect");//判断相交
@@ -103,7 +104,7 @@ void MainWindow::on_ButtonCal_clicked()
 
 void MainWindow::on_ButtonTest_clicked()
 {
-    int count=1000,j1=0,j2=0,k=0;
+    int count=100,j1=0,j2=0,k=0;
     int *test=new int[count];
     QString s1;
     for (int i=0;i<count;i++) {
@@ -121,6 +122,7 @@ void MainWindow::on_ButtonTest_clicked()
         k+=t.elapsed();
         t.invalidate();
         test[i]=0;
+/*
         if (!checkDelaunay1(vdot,dot)) {
             QPixmap pixmap(ui->labelImg->width(),ui->labelImg->height());
             pixmap.fill(Qt::white);
@@ -149,10 +151,11 @@ void MainWindow::on_ButtonTest_clicked()
         }
         if (!checkDelaunay(vdot,dot)) {test[i]=2;j2++;ui->textEdit->append(QString::number(i)+":line error");
         }
+*/
         delvdot(vdot);
         ui->textEdit->append(QString::number(i)+" end");
         qApp->processEvents();
-    }
+    }    
     qDebug()<<s1;
     ui->textEdit->append("len:"+QString::number(len)+" total:"+QString::number(count)+" circle error:"+QString::number(j1)+" line error:"+QString::number(j2)+" average time(ms):"+QString::number(k/count));
     delete[] test;

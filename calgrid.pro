@@ -26,6 +26,7 @@ SOURCES += \
 
 HEADERS += \
     delaunay.h \
+    delaunayomp.h \
     mainwindow.h
 
 FORMS += \
